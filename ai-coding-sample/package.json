@@ -1,0 +1,81 @@
+{
+	"name": "ai-coding-sample",
+	"displayName": "AI Coding",
+	"description": "AI Coding 插件 Demo：IDE / SOLO 模式一键切换",
+	"version": "0.0.1",
+	"publisher": "vscode-samples",
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"categories": ["Other"],
+	"activationEvents": ["onStartupFinished"],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "aiCoding.ideMode",
+				"title": "IDE 模式",
+				"icon": "$(layout-sidebar-right)",
+				"tooltip": "切换到 IDE 模式（侧边栏聊天）"
+			},
+			{
+				"command": "aiCoding.soloMode",
+				"title": "SOLO 模式",
+				"icon": "$(screen-full)",
+				"tooltip": "切换到 SOLO 模式（全屏聊天）"
+			}
+		],
+		"menus": {
+			"editor/title": [
+				{
+					"command": "aiCoding.ideMode",
+					"group": "navigation@1"
+				},
+				{
+					"command": "aiCoding.soloMode",
+					"group": "navigation@2"
+				}
+			],
+			"view/title": [
+				{
+					"command": "aiCoding.ideMode",
+					"group": "navigation@1",
+					"when": "view == aiCoding.chatView"
+				},
+				{
+					"command": "aiCoding.soloMode",
+					"group": "navigation@2",
+					"when": "view == aiCoding.chatView"
+				}
+			]
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "ai-coding",
+					"title": "AI Coding",
+					"icon": "$(robot)"
+				}
+			]
+		},
+		"views": {
+			"ai-coding": [
+				{
+					"type": "webview",
+					"id": "aiCoding.chatView",
+					"name": "Chat"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/node": "^22",
+		"@types/vscode": "^1.100.0",
+		"typescript": "^5.8.2"
+	}
+}
