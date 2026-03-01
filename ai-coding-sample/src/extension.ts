@@ -98,8 +98,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	soloBtn.show();
 	context.subscriptions.push(soloBtn);
 
-	// 记住活动栏是否已被隐藏（用于恢复）
+	// 记住活动栏和侧边栏是否已被隐藏（用于恢复）
 	let activityBarHiddenByUs = false;
+	let sidebarHiddenByUs = false;
 
 	/** 切换状态栏高亮，表示当前所处模式 */
 	function setMode(mode: 'ide' | 'solo') {
@@ -129,6 +130,17 @@ export async function activate(context: vscode.ExtensionContext) {
 				}
 			}
 
+			// 恢复侧边栏显示（如果我们之前隐藏了它，使用 toggle 保持视图状态）
+			if (sidebarHiddenByUs) {
+				try {
+					await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+					console.log('[AI Coding] ✓ 恢复侧边栏显示');
+					sidebarHiddenByUs = false;
+				} catch (e) {
+					console.warn('[AI Coding] ⚠ 恢复侧边栏失败:', e);
+				}
+			}
+
 			// 打开右侧辅助栏并聚焦聊天视图
 			await vscode.commands.executeCommand('workbench.action.focusAuxiliaryBar');
 			await vscode.commands.executeCommand('aiCoding.chatView.focus');
@@ -139,6 +151,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	// 打开全屏 Webview 面板，包含历史对话列表 + 聊天区
 	context.subscriptions.push(
 		vscode.commands.registerCommand('aiCoding.soloMode', async () => {
+			// 如果面板已存在，直接聚焦，不重复执行隐藏命令
+			if (soloPanel) {
+				soloPanel.reveal(vscode.ViewColumn.One, true);
+				return;
+			}
+
 			setMode('solo');
 			
 			// 隐藏活动栏（使用 toggle 命令）
@@ -154,14 +172,16 @@ export async function activate(context: vscode.ExtensionContext) {
 				}
 			}
 			
-			// 隐藏侧边栏和面板，实现全屏效果
+			// 隐藏侧边栏（使用 toggle 命令，保持视图状态）
 			try {
-				await vscode.commands.executeCommand('workbench.action.closeSidebar');
-				console.log('[AI Coding] ✓ 关闭侧边栏');
+				await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+				sidebarHiddenByUs = true;
+				console.log('[AI Coding] ✓ 隐藏侧边栏');
 			} catch (e) {
-				console.warn('[AI Coding] ⚠ 关闭侧边栏失败:', e);
+				console.warn('[AI Coding] ⚠ 隐藏侧边栏失败:', e);
 			}
 			
+			// 关闭底部面板
 			try {
 				await vscode.commands.executeCommand('workbench.action.closePanel');
 				console.log('[AI Coding] ✓ 关闭面板');
@@ -169,17 +189,12 @@ export async function activate(context: vscode.ExtensionContext) {
 				console.warn('[AI Coding] ⚠ 关闭面板失败:', e);
 			}
 			
+			// 关闭右侧辅助栏
 			try {
 				await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
 				console.log('[AI Coding] ✓ 关闭辅助栏');
 			} catch (e) {
 				console.warn('[AI Coding] ⚠ 关闭辅助栏失败:', e);
-			}
-
-			// 如果面板已存在，直接聚焦
-			if (soloPanel) {
-				soloPanel.reveal(vscode.ViewColumn.One, true);
-				return;
 			}
 
 			// 创建全屏 Webview 面板
@@ -202,6 +217,16 @@ export async function activate(context: vscode.ExtensionContext) {
 						activityBarHiddenByUs = false;
 					} catch (e) {
 						console.warn('[AI Coding] ⚠ 恢复活动栏失败:', e);
+					}
+				}
+				// 恢复侧边栏显示（如果我们之前隐藏了它）
+				if (sidebarHiddenByUs) {
+					try {
+						await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+						console.log('[AI Coding] ✓ 恢复侧边栏显示');
+						sidebarHiddenByUs = false;
+					} catch (e) {
+						console.warn('[AI Coding] ⚠ 恢复侧边栏失败:', e);
 					}
 				}
 			});
