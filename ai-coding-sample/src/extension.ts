@@ -98,6 +98,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	soloBtn.show();
 	context.subscriptions.push(soloBtn);
 
+	// 记住活动栏是否已被隐藏（用于恢复）
+	let activityBarHiddenByUs = false;
+
 	/** 切换状态栏高亮，表示当前所处模式 */
 	function setMode(mode: 'ide' | 'solo') {
 		const active = new vscode.ThemeColor('statusBarItem.warningBackground');
@@ -115,6 +118,17 @@ export async function activate(context: vscode.ExtensionContext) {
 			soloPanel?.dispose();
 			soloPanel = undefined;
 
+			// 恢复活动栏显示（如果我们之前隐藏了它）
+			if (activityBarHiddenByUs) {
+				try {
+					await vscode.commands.executeCommand('workbench.action.toggleActivityBarVisibility');
+					console.log('[AI Coding] ✓ 恢复活动栏显示');
+					activityBarHiddenByUs = false;
+				} catch (e) {
+					console.warn('[AI Coding] ⚠ 恢复活动栏失败:', e);
+				}
+			}
+
 			// 打开右侧辅助栏并聚焦聊天视图
 			await vscode.commands.executeCommand('workbench.action.focusAuxiliaryBar');
 			await vscode.commands.executeCommand('aiCoding.chatView.focus');
@@ -126,6 +140,19 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('aiCoding.soloMode', async () => {
 			setMode('solo');
+			
+			// 隐藏活动栏（使用 toggle 命令）
+			const config = vscode.workspace.getConfiguration('workbench');
+			const activityBarVisible = config.get<boolean>('activityBar.visible');
+			if (activityBarVisible !== false) {
+				try {
+					await vscode.commands.executeCommand('workbench.action.toggleActivityBarVisibility');
+					activityBarHiddenByUs = true;
+					console.log('[AI Coding] ✓ 隐藏活动栏');
+				} catch (e) {
+					console.warn('[AI Coding] ⚠ 隐藏活动栏失败:', e);
+				}
+			}
 			
 			// 隐藏侧边栏和面板，实现全屏效果
 			try {
@@ -163,10 +190,20 @@ export async function activate(context: vscode.ExtensionContext) {
 				{ enableScripts: true, retainContextWhenHidden: true },
 			);
 			soloPanel.webview.html = getSoloHtml();
-			soloPanel.onDidDispose(() => {
+			soloPanel.onDidDispose(async () => {
 				soloPanel = undefined;
 				// 用户关闭面板时，切换回 IDE 模式
 				setMode('ide');
+				// 恢复活动栏显示（如果我们之前隐藏了它）
+				if (activityBarHiddenByUs) {
+					try {
+						await vscode.commands.executeCommand('workbench.action.toggleActivityBarVisibility');
+						console.log('[AI Coding] ✓ 恢复活动栏显示');
+						activityBarHiddenByUs = false;
+					} catch (e) {
+						console.warn('[AI Coding] ⚠ 恢复活动栏失败:', e);
+					}
+				}
 			});
 		}),
 	);
